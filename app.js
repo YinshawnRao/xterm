@@ -34,24 +34,13 @@ app.post('/terminals', function(req, res, next){
     env: process.env
   });
 
-  // var isLogin = false;
-  // term.write('ssh root@115.159.48.163 \r');
-
   console.log('Created terminal with PID: ' + term.pid);
 
   terminals[term.pid] = term;
 
   logs[term.pid] = '';
   term.on('data', function(data) {  	
-  	// if(data.toString().indexOf("password:") > 0) {
-  	// 	term.write('340dAC4b5db061DEV2ba$%#&7^a9dec7eb7bb6de\r');  		
-  	// }
-  	// if(data.toString().indexOf('Last login') > 0) {
-  	// 	isLogin = true;
-  	// }
-  	// if(data.toString().indexOf("password:") < 0 && isLogin) {
   		logs[term.pid] += data;
-  	// }
   });
 
   res.send(term.pid.toString());
@@ -79,10 +68,6 @@ app.ws('/terminals/:pid', function (ws, req) {
 	  ws.send(logs[term.pid]);
 
 	term.on('data', function(data) {
-		// if(data.toString().indexOf("password:") > 0 || data.replace(/\s/g,'').length === 0) {
-		// 	return;
-		// }
-
 	    try {
 	      ws.send(data);
 	    } catch (ex) {
@@ -145,7 +130,7 @@ app.post('/ssh/login', function (req, res, next) {
 
 
 app.ws('/ssh', function (ws, req) {
-	
+
 });
 
 
