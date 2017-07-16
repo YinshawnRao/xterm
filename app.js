@@ -36,15 +36,26 @@ app.post('/terminals', function(req, res, next){
 
   console.log('Created terminal with PID: ' + term.pid);
 
+  //自定义SSH
+  term.write('ssh root@115.159.48.163\r');
+
   terminals[term.pid] = term;
 
   logs[term.pid] = '';
-  term.on('data', function(data) {  	
-  		logs[term.pid] += data;
-  });
+  term.on('data', function(data) { 
+		if(data.toString() === "root@115.159.48.163's password: ") {
+			term.write('340dAC4b5db061DEV2ba$%#&7^a9dec7eb7bb6de\r');			
+		} 	
+		if(data.toString().indexOf('Last login:') >= 0) {
+	  		term.write('clear\r');
 
-  res.send(term.pid.toString());
-  res.end();
+	  		res.send(term.pid.toString());
+  			res.end();
+
+	  	}
+			
+   		logs[term.pid] += data;
+  });  
 
 });
 
@@ -65,7 +76,7 @@ app.post('/terminals/:pid/size', function (req, res) {
 app.ws('/terminals/:pid', function (ws, req) {
 	var term = terminals[parseInt(req.params.pid)];
 	  console.log('Connected to terminal ' + term.pid);
-	  ws.send(logs[term.pid]);
+	  ws.send(logs[term.pid]);	
 
 	term.on('data', function(data) {
 	    try {
@@ -138,7 +149,7 @@ app.post('/ssh/login', function (req, res, next) {
 app.ws('/ssh', function (ws, req) {
 
 	ws.send(sshLogs)
-console.log(sshLogs)
+// console.log(sshLogs)
 	ws.on('message', function(msg) {
 	   
 		sshConn.shell(function(err, stream) {
@@ -147,15 +158,16 @@ console.log(sshLogs)
 		      console.log('Stream :: close');
 		      sshConn.end();
 		    }).on('data', function(data) {		    
-
+console.log(data.toString())
 		      ws.send(data.toString());
 
 		    }).stderr.on('data', function(data) {
 		      console.log('STDERR: ' + data);
 		    });
-		 });
 
-		stream.write(msg + '\r');
+		    stream.write(msg);
+
+		 });		
 
 	});
 

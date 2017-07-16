@@ -25,6 +25,7 @@
   'use strict';
 
   var exports = {};
+  var saveChar = [];
 
   /**
    * Attaches the given terminal to the given socket.
@@ -64,10 +65,24 @@
         term.write(ev.data);
       }
     };
+    
 
     term._sendData = function (data) {
+      saveChar.push(data);
       socket.send(data);
     };
+
+    term.on('key', function (key, ev) {       
+      if (ev.keyCode == 13) {
+        var lastCommand = saveChar.join('').replace(/\s+/g,'');
+        if(lastCommand === 'exit') {
+          term.writeln('');
+          term.writeln('exit success');    
+          term.off('data', term._sendData);
+        }
+        saveChar = [];
+      }
+    });
 
     socket.addEventListener('message', term._getMessage);
 
