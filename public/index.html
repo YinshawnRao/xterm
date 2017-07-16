@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>web shell</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+	<link rel="stylesheet" type="text/css" href="assets/normalize.css">
+	<link rel="stylesheet" type="text/css" href="assets/xterm.css">
+</head>
+<body>
+	<div id="terminal"></div>
+
+	<script type="text/javascript" src="http://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+	<script type="text/javascript" src="assets/xterm.js"></script>
+	<script type="text/javascript" src="assets/xterm.fit.js"></script>
+	<script type="text/javascript" src="assets/xterm.attach.js"></script>
+	<script type="text/javascript">
+
+		var term,protocol,socketURL,socket;
+
+		term = new Terminal({
+			cursorBlink: true, //光标是否闪烁，默认不闪烁
+			cols: 100, //列数
+			rows: 100, //行数
+			// scrollback: 500, //一个buffer内滚动的最大行数，默认1000行
+			// tabStopWidth: 5 //tab
+		});
+
+		protocol = (location.protocol === 'https:') ? 'wss://' : 'ws://';
+  socketURL = protocol + '47.92.37.213:3000/terminals/';
+
+		//第二个参数表示是否开启之后自动focus，默认为true
+		term.open(document.getElementById('#terminal'), true);		
+
+		// //自动调整大小
+		// term.fit();
+
+		// //获取初始化大小
+		// var initialGeometry = term.proposeGeometry(),
+	 //      cols = initialGeometry.cols,
+	 //      rows = initialGeometry.rows;
+
+
+	    $.post('/terminals?cols=' + 100 + '&rows=' + 100)
+	    .then(function (pid) {
+	    	window.pid = pid;
+		      socketURL += pid;
+		      socket = new WebSocket(socketURL);
+		      socket.onopen = runTerminal;
+	    });
+
+	    //运行terminal
+		function runTerminal() {
+			term.attach(socket);
+		}
+
+
+	</script>
+</body>
+</html>
