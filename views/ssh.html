@@ -3,9 +3,9 @@
 <head>
 	<title><%=title%></title>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-	<link rel="stylesheet" type="text/css" href="../public/assets/css/normalize.css">
-	<link rel="stylesheet" type="text/css" href="../public/assets/css/fullscreen.css">
-	<link rel="stylesheet" type="text/css" href="../public/assets/css/xterm.css">
+	<link rel="stylesheet" type="text/css" href="/assets/css/normalize.css">
+	<link rel="stylesheet" type="text/css" href="/assets/css/fullscreen.css">
+	<link rel="stylesheet" type="text/css" href="/assets/css/xterm.css">
 	<style type="text/css">
 		html,body { 
 			height: 100%;			
@@ -19,14 +19,12 @@
 </head>
 <body>
 	<div id="terminal">
-		<%=content%>
 	</div>
 
-	<script type="text/javascript" src="../public/assets/js/xterm.js"></script>
-	<script type="text/javascript" src="../public/assets/js/xterm.fit.js"></script>
-	<script type="text/javascript" src="../public/assets/js/xterm.attach.js"></script>
-	<script type="text/javascript" src="../public/assets/js/xterm.fullscreen.js"></script>	
-
+	<script type="text/javascript" src="/assets/js/xterm.js"></script>
+	<script type="text/javascript" src="/assets/js/xterm.fit.js"></script>
+	<script type="text/javascript" src="/assets/js/xterm.attach.js"></script>
+	<script type="text/javascript" src="/assets/js/xterm.fullscreen.js"></script>	
 
 	<script type="text/javascript">
 
@@ -41,7 +39,7 @@
 		        rows = size.rows,
 		        url = '/ssh/size?cols=' + cols + '&rows=' + rows;
 
-		    fetch(url, {method: 'POST'});
+		    // fetch(url, {method: 'POST'});
 		});
 
 		protocol = (location.protocol === 'https:') ? 'wss://' : 'ws://';
@@ -62,19 +60,55 @@
 	      rows = initialGeometry.rows;
 
 
-	    fetch('/ssh?cols=' + cols + '&rows=' + rows, {method: 'POST'})
-	    .then(function (res) {
-	    	res.text().then(function (pid) {
-	    		window.pid = pid;
-			      socketURL += pid;
-			      socket = new WebSocket(socketURL);
-			      socket.onopen = runTerminal;
-			 })	    	
-	    });
+	    socket = new WebSocket(socketURL);
+		socket.onopen = runTerminal;
+
+		socket.onmessage = function(msg) {
+		  	console.log(msg.data);
+		  	term.write(msg.data);
+		};
 
 	    //运行terminal
 		function runTerminal() {
-			console.log(socket)
+
+			  var shellprompt = '$ ';
+
+			  term.prompt = function () {
+			    // term.write('\r\n' + shellprompt);
+
+			  };
+
+			  term.writeln('');
+			  term.prompt();
+
+			  term.on('key', function (key, ev) {
+			    var printable = (
+			      !ev.altKey && !ev.altGraphKey && !ev.ctrlKey && !ev.metaKey
+			    );
+
+			    if (ev.keyCode == 13) {
+			      term.prompt();
+			    } else if (ev.keyCode == 8) {
+			     // Do not delete the prompt
+			      if (term.x > 2) {
+			        term.write('\b \b');
+			      }
+			    } else if (printable) {
+			      term.write(key);
+			    }
+			  });
+
+			  term.on('data', function (msg) {
+			  	socket.send(msg);
+			  });
+
+			  term.on('paste', function (data, ev) {
+			    term.write(data);
+			  });
+
+
+			  
+
 		}
 
 	</script>

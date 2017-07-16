@@ -89,35 +89,33 @@ app.ws('/terminals/:pid', function (ws, req) {
 });
 
 
+var sshConn, sshLogs = '';
+
 //登录
 app.post('/ssh/login', function (req, res, next) {
 
-	var conn = new Client();
+	sshLogs = '';
+	sshConn = new Client();
 	var body = req.body;
 
-	conn.connect({
+	sshConn.connect({
 	  host: body.inputHost,
 	  port: 22,
 	  username: body.inputUsername,
 	  password: body.inputPassword
 	});
 
-	conn.on('ready', function() {
+	sshConn.on('ready', function() {
 		console.log('Client :: ready');
 
-		conn.shell(function(err, stream) {
+		sshConn.shell(function(err, stream) {
 		    if (err) throw err;
 		    stream.on('close', function() {
-		      console.log('Stream :: close');
-		      conn.end();
+		      console.log('Stream :: close');		      
+		      sshConn.end();
 		    }).on('data', function(data) {
 
-		      res.render('terminal', {
-		      	title: 'terminal ' + body.inputHost,
-		      	content: data.toString()
-		      });
-
-		      res.end();
+		      sshLogs += data;
 
 		    }).stderr.on('data', function(data) {
 		      console.log('STDERR: ' + data);
@@ -126,10 +124,44 @@ app.post('/ssh/login', function (req, res, next) {
 
 	});
 
+	res.render('ssh', {
+  		title: 'terminal ' + body.inputHost
+  	});
+
 });
 
 
+//登录
+//初始化信息
+
+
 app.ws('/ssh', function (ws, req) {
+
+	ws.send(sshLogs)
+console.log(sshLogs)
+	ws.on('message', function(msg) {
+	   
+		sshConn.shell(function(err, stream) {
+		    if (err) throw err;
+		    stream.on('close', function() {
+		      console.log('Stream :: close');
+		      sshConn.end();
+		    }).on('data', function(data) {		    
+
+		      ws.send(data.toString());
+
+		    }).stderr.on('data', function(data) {
+		      console.log('STDERR: ' + data);
+		    });
+		 });
+
+		stream.write(msg + '\r');
+
+	});
+
+	ws.on('close', function () {
+	    sshConn.end();	    
+	});
 
 });
 
