@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title><%=title%></title>
+	<title>本机终端</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-	<link rel="stylesheet" type="text/css" href="/assets/css/normalize.css">
-	<link rel="stylesheet" type="text/css" href="/assets/css/fullscreen.css">
-	<link rel="stylesheet" type="text/css" href="/assets/css/xterm.css">
+	<link rel="stylesheet" type="text/css" href="../assets/css/normalize.css">
+	<link rel="stylesheet" type="text/css" href="../assets/css/fullscreen.css">
+	<link rel="stylesheet" type="text/css" href="../assets/css/xterm.css">
 	<style type="text/css">
 		html,body { 
 			height: 100%;			
@@ -18,32 +18,38 @@
 	</style>
 </head>
 <body>
-	<div id="terminal">
-	</div>
+	<div id="terminal"></div>
 
-	<script type="text/javascript" src="/assets/js/xterm.js"></script>
-	<script type="text/javascript" src="/assets/js/xterm.fit.js"></script>
-	<script type="text/javascript" src="/assets/js/xterm.attach.js"></script>
-	<script type="text/javascript" src="/assets/js/xterm.fullscreen.js"></script>	
-
+	<script type="text/javascript" src="../assets/js/xterm.js"></script>
+	<script type="text/javascript" src="../assets/js/xterm.fit.js"></script>
+	<script type="text/javascript" src="../assets/js/xterm.attach.js"></script>
+	<script type="text/javascript" src="../assets/js/xterm.fullscreen.js"></script>	
 	<script type="text/javascript">
 
-		var term,protocol,socketURL,socket;
+		var term,protocol,socketURL,socket,
+		pid = '<%=pid%>';
 
 		term = new Terminal({
-			cursorBlink: true //光标是否闪烁，默认不闪烁
+			cursorBlink: true, //光标是否闪烁，默认不闪烁
+			// cols: 100, //列数
+			// rows: 100, //行数
+			// scrollback: 500, //一个buffer内滚动的最大行数，默认1000行
+			// tabStopWidth: 5 //tab
 		});
 
 		term.on('resize', function (size) {
+		    if (!pid) {
+		      return;
+		    }
 		    var cols = size.cols,
 		        rows = size.rows,
-		        url = '/ssh/size?cols=' + cols + '&rows=' + rows;
+		        url = '/terminals/' + pid + '/size?cols=' + cols + '&rows=' + rows;
 
-		    // fetch(url, {method: 'POST'});
+		    fetch(url, {method: 'POST'});
 		});
 
 		protocol = (location.protocol === 'https:') ? 'wss://' : 'ws://';
-  socketURL = protocol + '47.92.37.213:3000/ssh/';
+  socketURL = protocol + '47.92.37.213:3000/terminals/';
 
 		//第二个参数表示是否开启之后自动focus，默认为true
 		term.open(document.getElementById('terminal'), true);		
@@ -59,60 +65,17 @@
 	      cols = initialGeometry.cols,
 	      rows = initialGeometry.rows;
 
-
-	    socket = new WebSocket(socketURL);
-		socket.onopen = runTerminal;
-
-		socket.onmessage = function(msg) {
-		  	console.log(msg.data);
-		  	term.write(msg.data);
-		};
+      	socketURL += pid;
+      	socket = new WebSocket(socketURL);
+      	socket.onopen = runTerminal;
+	    
 
 	    //运行terminal
 		function runTerminal() {
-
-			  var shellprompt = '$ ';
-
-			  term.prompt = function () {
-			    // term.write('\r\n' + shellprompt);
-
-			  };
-
-			  term.writeln('');
-			  term.prompt();
-
-			  term.on('key', function (key, ev) {
-			    var printable = (
-			      !ev.altKey && !ev.altGraphKey && !ev.ctrlKey && !ev.metaKey
-			    );
-
-			    if (ev.keyCode == 13) {
-			      term.prompt();
-			    } else if (ev.keyCode == 8) {
-			     // Do not delete the prompt
-			      if (term.x > 2) {
-			        term.write('\b \b');
-			      }
-			    } else if (printable) {
-			      term.write(key);
-			    }
-			  });
-
-			  term.on('data', function (msg) {
-			  	socket.send(msg);
-			  });
-
-			  term.on('paste', function (data, ev) {
-			    term.write(data);
-			  });
-
-
-			  
-
+			term.attach(socket);
 		}
 
-	</script>
 
+	</script>
 </body>
 </html>
-
